@@ -59,9 +59,14 @@ class Relationships
         collect($values)
             ->reject(fn ($id) => $models->pluck($relatedResource->primaryKey())->contains($id))
             ->reject(fn ($id) => in_array($id, $deleted))
-            ->each(fn ($id) => $relatedResource->model()->find($id)->update([
-                $relationship->getForeignKeyName() => $this->model->getKey(),
-            ]));
+            ->each(function ($id) use ($relatedResource, $relationship) {
+                if (is_null($model = $relatedResource->model()->find($id))) {
+                    Log::error("Resource: {$relatedResource->handle()}:{$relatedResource->name()}");
+                    Log::error("Model: $id");
+                }
+
+                $model->update([$relationship->getForeignKeyName() => $this->model->getKey()]);
+            });
 
         if ($field->fieldtype()->config('reorderable') && $orderColumn = $field->fieldtype()->config('order_column')) {
             collect($values)
